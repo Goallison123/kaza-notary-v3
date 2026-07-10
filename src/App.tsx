@@ -9,6 +9,7 @@ import SettingsView from './views/SettingsView';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ScanPage from './pages/ScanPage';
+import KazaLoader from './components/KazaLoader';
 
 type AppView = 'dashboard' | 'records' | 'settings';
 
@@ -43,17 +44,9 @@ function AppShell() {
   );
 }
 
-function LoadingSpinner() {
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-[#003366] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-}
-
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <KazaLoader label="Loading..." />;
   if (!session) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
@@ -62,7 +55,7 @@ export default function App() {
   const { session, loading } = useAuth();
   const navigate = useNavigate();
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) return <KazaLoader />;
 
   return (
     <Routes>

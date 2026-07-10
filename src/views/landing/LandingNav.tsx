@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import KazaLogo from '../../components/KazaLogo';
 
 interface LandingNavProps {
   onEnterApp: () => void;
@@ -29,10 +30,8 @@ export default function LandingNav({ onEnterApp }: LandingNavProps) {
       }`}
     >
       <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-[#002244] flex items-center justify-center">
-            <BookOpen size={14} className="text-white" />
-          </div>
+        <div className="flex items-center gap-1.5">
+          <KazaLogo variant="static" size={44} />
           <span className={`font-extrabold text-lg tracking-tight transition-colors ${scrolled ? 'text-[#002244]' : 'text-white'}`}>
             Kaza
           </span>

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Settings, Bell, BookOpen, LogOut, User, ChevronDown } from 'lucide-react';
+import { Settings, Bell, LogOut, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationsContext';
 import NotificationsDropdown from './NotificationsDropdown';
+import KazaLogo from './KazaLogo';
 
 interface TopbarProps {
   onLogoClick?: () => void;
@@ -21,10 +22,8 @@ export default function Topbar({ onLogoClick, onSettings }: TopbarProps) {
 
   return (
     <header className="h-14 bg-[#002244] border-b border-white/10 flex items-center justify-between px-4 lg:px-6 shrink-0 z-10">
-      <button onClick={onLogoClick} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-        <div className="w-8 h-8 rounded-full bg-white/20 border-2 border-white/40 flex items-center justify-center shrink-0">
-          <BookOpen size={14} className="text-white" />
-        </div>
+      <button onClick={onLogoClick} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+        <KazaLogo variant="static" size={40} />
         <div className="flex items-baseline gap-1.5">
           <span className="text-white font-bold text-base leading-none">Kaza</span>
           <span className="text-slate-300 font-normal text-sm hidden sm:block">: Notary Digital Register</span>
