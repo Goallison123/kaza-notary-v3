@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
+import { usePlan } from './hooks/usePlan';
 import Topbar from './components/Topbar';
 import Sidebar from './components/Sidebar';
+import PlanGatekeeper from './components/PlanGatekeeper';
 import LandingView from './views/LandingView';
 import DashboardView from './views/DashboardView';
 import RecordsView from './views/RecordsView';
@@ -16,11 +18,14 @@ type AppView = 'dashboard' | 'records' | 'settings';
 function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
+  const plan = usePlan();
 
   const activeView: AppView =
     location.pathname.startsWith('/records') ? 'records' :
     location.pathname.startsWith('/settings') ? 'settings' :
     'dashboard';
+
+  if (plan.isLockedOut) return <PlanGatekeeper plan={plan} />;
 
   return (
     <div className="flex flex-col h-screen bg-[#F8FAFC] overflow-hidden">

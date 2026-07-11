@@ -73,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: officeName,
       user_id: data.user.id,
       account_status: 'Trial',
+      plan_tier: 'Free-Trial',
     });
 
     return officeError ? officeError.message : null;

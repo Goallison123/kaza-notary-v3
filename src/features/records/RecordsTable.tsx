@@ -3,10 +3,11 @@ import * as XLSX from 'xlsx';
 import {
   ChevronUp, ChevronDown, Search, Filter, Upload,
   FileSearch, FileBarChart2, Eye, X, Download,
-  ChevronRight, CheckCircle,
+  ChevronRight, CheckCircle, Lock,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlan } from '../../hooks/usePlan';
 import { ClientLog, ClientStatus } from '../../types';
 import StatusBadge from './StatusBadge';
 import Button from '../../components/Button';
@@ -226,6 +227,7 @@ function VerifiedSearchModal({
 /* ─── Main Component ─────────────────────────────────────────────────────── */
 export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: RecordsTableProps) {
   const { office } = useAuth();
+  const plan = usePlan();
   const [records, setRecords] = useState<ClientLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -322,10 +324,12 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
           <Button
             variant="secondary"
             size="sm"
-            icon={<FileBarChart2 size={13} />}
-            onClick={() => downloadXLSX(records, 'daily-report')}
+            icon={plan.hasReports ? <FileBarChart2 size={13} /> : <Lock size={13} />}
+            onClick={() => plan.hasReports && downloadXLSX(records, 'daily-report')}
+            disabled={!plan.hasReports}
+            className={!plan.hasReports ? 'opacity-50 cursor-not-allowed' : ''}
           >
-            Generate Report
+            {plan.hasReports ? 'Generate Report' : 'Report (Pro)'}
           </Button>
         </div>
 

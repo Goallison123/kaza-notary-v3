@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { QrCode, ExternalLink, ScanLine, AlertTriangle } from 'lucide-react';
+import { QrCode, ExternalLink, ScanLine, AlertTriangle, Lock } from 'lucide-react';
 import QRCode from 'qrcode';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { usePlan } from '../../hooks/usePlan';
 import { ServiceCategory } from '../../types';
 import InputField from '../../components/InputField';
 import Button from '../../components/Button';
@@ -16,6 +17,7 @@ function generateToken(): string {
 
 export default function IntakeForm() {
   const { office } = useAuth();
+  const plan = usePlan();
   const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [loadingCats, setLoadingCats] = useState(true);
   const [fullName, setFullName] = useState('');
@@ -36,16 +38,27 @@ export default function IntakeForm() {
       .eq('is_active', true)
       .order('created_at')
       .then(({ data }) => {
-        setCategories(data ?? []);
+        // Basic tier: limit to first 3 categories
+        const limited = plan.maxCategories !== Infinity && (data ?? []).length > plan.maxCategories
+          ? (data ?? []).slice(0, plan.maxCategories)
+          : data ?? [];
+        setCategories(limited);
         setLoadingCats(false);
       });
-  }, [office?.id]);
+  }, [office?.id, plan.maxCategories]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!fullName.trim()) { setError('Client name is required.'); return; }
     if (!phone.trim() || phone === '+250 ') { setError('Phone number is required.'); return; }
     if (!office) { setError('Office not found. Please sign in again.'); return; }
+
+    // Tier gate: Basic plan 200/month limit
+    if (plan.requestsLimit !== Infinity && plan.requestsUsed >= plan.requestsLimit) {
+      setError(`You have reached the ${plan.requestsLimit} monthly request limit on the Basic plan. Upgrade to Professional for unlimited requests.`);
+      return;
+    }
+
     setError('');
     setLoading(true);
 
@@ -68,6 +81,12 @@ export default function IntakeForm() {
       setLoading(false);
       return;
     }
+
+    // Increment monthly request counter
+    await supabase
+      .from('offices')
+      .update({ monthly_request_counter: (office.monthly_request_counter ?? 0) + 1 })
+      .eq('id', office.id);
 
     const url = `${window.location.origin}/scan/${tok}`;
     setScanUrl(url);
@@ -186,6 +205,31 @@ export default function IntakeForm() {
               <ScanLine size={28} className="text-slate-400" />
             </div>
             <img src={qrDataUrl} alt={`QR code for token ${token}`} className="w-[140px] h-[140px] rounded-lg border border-slate-200 shadow-sm" />
+          </div>
+        </div>
+      )}
+
+      {/* Basic tier usage indicator */}
+      {plan.requestsLimit !== Infinity && (
+        <div className="bg-slate-50 rounded-xl border border-slate-200 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${plan.requestsRemaining > 0 ? 'bg-sky-100' : 'bg-red-100'}`}>
+              {plan.requestsRemaining > 0
+                ? <ScanLine size={13} className="text-sky-600" />
+                : <Lock size={13} className="text-red-500" />}
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-700">Monthly Requests</p>
+              <p className="text-[10px] text-slate-500">
+                {plan.requestsUsed} of {plan.requestsLimit} used · {plan.requestsRemaining} remaining
+              </p>
+            </div>
+          </div>
+          <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${plan.requestsRemaining > 0 ? 'bg-sky-500' : 'bg-red-500'}`}
+              style={{ width: `${Math.min(100, (plan.requestsUsed / plan.requestsLimit) * 100)}%` }}
+            />
           </div>
         </div>
       )}

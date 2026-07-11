@@ -76,13 +76,23 @@ export default function Topbar({ onLogoClick, onSettings }: TopbarProps) {
                 <div className="px-4 py-3 border-b border-slate-100">
                   <p className="text-xs font-bold text-slate-800 truncate">{office?.name ?? 'My Office'}</p>
                   <p className="text-[10px] text-slate-400 truncate mt-0.5">{user?.email}</p>
-                  <span className={`inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    office?.account_status === 'Active' ? 'bg-emerald-100 text-emerald-700' :
-                    office?.account_status === 'Trial' ? 'bg-amber-100 text-amber-700' :
-                    'bg-red-100 text-red-700'
-                  }`}>
-                    {office?.account_status ?? 'Trial'}
-                  </span>
+                  <div className="flex items-center gap-1.5 mt-1.5">
+                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      office?.account_status === 'Active' ? 'bg-emerald-100 text-emerald-700' :
+                      office?.account_status === 'Trial' ? 'bg-amber-100 text-amber-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {office?.account_status ?? 'Trial'}
+                    </span>
+                    <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      office?.plan_tier === 'Professional' ? 'bg-sky-100 text-sky-700' :
+                      office?.plan_tier === 'Basic' ? 'bg-slate-100 text-slate-600' :
+                      office?.plan_tier === 'Enterprise' ? 'bg-purple-100 text-purple-700' :
+                      'bg-amber-100 text-amber-700'
+                    }`}>
+                      {office?.plan_tier ?? 'Free-Trial'}
+                    </span>
+                  </div>
                 </div>
                 <button
                   onClick={() => { setShowUserMenu(false); onSettings?.(); }}

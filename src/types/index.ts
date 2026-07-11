@@ -13,6 +13,8 @@ export type FieldType =
 
 export type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
+export type PlanTier = 'Free-Trial' | 'Basic' | 'Professional' | 'Enterprise';
+
 export interface Office {
   id: string;
   name: string;
@@ -20,6 +22,21 @@ export interface Office {
   subscription_expires_at: string;
   account_status: 'Active' | 'Suspended' | 'Trial';
   user_id: string | null;
+  created_at: string;
+  plan_tier: PlanTier;
+  branch_count: number;
+  monthly_request_counter: number;
+  monthly_counter_reset_at: string | null;
+}
+
+export interface TeamMember {
+  id: string;
+  office_id: string;
+  email: string;
+  full_name: string;
+  role: 'admin' | 'staff';
+  user_id: string | null;
+  status: 'invited' | 'active' | 'removed';
   created_at: string;
 }
 

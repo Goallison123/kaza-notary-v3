@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
+import { X, Lock, TrendingUp } from 'lucide-react';
 import { ClientLog } from '../types';
 import RecordsTable from '../features/records/RecordsTable';
 import ClientDetailPanel from '../features/records/ClientDetailPanel';
 import AnalyticsPanel from '../features/records/AnalyticsPanel';
 import IntakeForm from '../features/intake/IntakeForm';
+import { usePlan } from '../hooks/usePlan';
 
 export default function RecordsView() {
+  const plan = usePlan();
   const [selectedClient, setSelectedClient] = useState<ClientLog | null>(null);
   const [showIntake, setShowIntake] = useState(false);
 
@@ -21,7 +23,24 @@ export default function RecordsView() {
           />
           <ClientDetailPanel client={selectedClient} />
         </div>
-        <AnalyticsPanel />
+
+        {/* Analytics: locked for Basic tier */}
+        {plan.hasAnalytics ? (
+          <AnalyticsPanel />
+        ) : (
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <Lock size={24} className="text-slate-400" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800 mb-2">Analytics Dashboard is a Professional feature</h3>
+            <p className="text-sm text-slate-500 max-w-md">
+              Upgrade to the Professional plan to unlock live analytics charts, status breakdowns, and daily report generation.
+            </p>
+            <div className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
+              <TrendingUp size={13} /> Professional: 45,000 RWF / month — Analytics + Reports included
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Upload / Intake Modal */}
