@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlan } from '../../hooks/usePlan';
 import { TeamMember } from '../../types';
+import UpgradeModal, { UpgradeButton } from '../../components/UpgradeModal';
 
 export default function TeamManagement() {
   const { office } = useAuth();
@@ -14,6 +15,7 @@ export default function TeamManagement() {
   const [fullName, setFullName] = useState('');
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState('');
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => { fetchMembers(); }, [office?.id]);
 
@@ -87,9 +89,14 @@ export default function TeamManagement() {
         <p className="text-sm text-slate-500 max-w-sm">
           Upgrade to the Professional plan to add unlimited team members and collaborate across your office.
         </p>
-        <div className="mt-4 px-4 py-2 rounded-lg bg-sky-50 border border-sky-200 text-xs font-semibold text-sky-700">
-          Professional: 45,000 RWF / month — Unlimited team members
+        <div className="mt-5">
+          <UpgradeButton onClick={() => setShowUpgrade(true)} label="Upgrade to Professional" size="md" />
         </div>
+        <UpgradeModal
+          open={showUpgrade}
+          onClose={() => setShowUpgrade(false)}
+          lockedFeature="team"
+        />
       </div>
     );
   }

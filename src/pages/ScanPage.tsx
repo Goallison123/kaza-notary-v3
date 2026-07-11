@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { ScanFormData, ScanField } from '../types';
+import DigitalTokenReceipt, { type TokenReceiptData } from '../components/DigitalTokenReceipt';
 
 /* ─── Signature Canvas ─────────────────────────────────────────────────── */
 function SignatureCanvas({ onSave }: { onSave: (data: string) => void }) {
@@ -264,6 +265,7 @@ export default function ScanPage() {
   const [signature, setSignature] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [receiptData, setReceiptData] = useState<TokenReceiptData | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -305,6 +307,14 @@ export default function ScanPage() {
       setSubmitting(false);
       return;
     }
+
+    setReceiptData({
+      queueNumber: data.queue_number ?? 0,
+      clientName: data.client_name ?? formData.client_name ?? 'Client',
+      serviceName: data.category_name ?? data.service_type ?? formData.category_name ?? 'General',
+      officeName: data.office_name ?? formData.office_name ?? 'Kaza Office',
+      submittedAt: data.submitted_at ?? new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    });
     setSubmitted(true);
     setSubmitting(false);
   };
@@ -333,37 +343,19 @@ export default function ScanPage() {
 
   if (!formConfig) return null;
 
-  /* Success */
+  /* Success — Digital Token Receipt */
+  if (submitted && receiptData) {
+    return <DigitalTokenReceipt data={receiptData} />;
+  }
   if (submitted) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-200">
-              <CheckCircle size={40} className="text-emerald-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-3">Submitted!</h1>
-            <p className="text-slate-600 leading-relaxed">
-              Your information has been securely received by <strong className="text-slate-800">{formConfig.office_name}</strong>.
-            </p>
+        <div className="max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-emerald-100 rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-200">
+            <CheckCircle size={40} className="text-emerald-600" />
           </div>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-3 mb-6">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Form type</span>
-              <span className="text-slate-700 font-medium">{formConfig.category_name}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-500">Submitted at</span>
-              <span className="text-slate-700">{new Date().toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-          </div>
-          <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4 text-sm text-sky-700">
-            <strong className="block mb-1">What happens next?</strong>
-            The team at {formConfig.office_name} will review your submission and contact you within 1–3 business days.
-          </div>
-          <div className="flex items-center justify-center gap-1.5 mt-8 text-xs text-slate-400">
-            <BookOpen size={12} /> Kaza: Notary Digital Register
-          </div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-3">Submitted!</h1>
+          <p className="text-slate-600">Your information has been securely received.</p>
         </div>
       </div>
     );

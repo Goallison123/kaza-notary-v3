@@ -1,16 +1,18 @@
 import { useState } from 'react';
-import { X, Lock, TrendingUp } from 'lucide-react';
+import { X, Lock, TrendingUp, Crown } from 'lucide-react';
 import { ClientLog } from '../types';
 import RecordsTable from '../features/records/RecordsTable';
 import ClientDetailPanel from '../features/records/ClientDetailPanel';
 import AnalyticsPanel from '../features/records/AnalyticsPanel';
 import IntakeForm from '../features/intake/IntakeForm';
 import { usePlan } from '../hooks/usePlan';
+import UpgradeModal, { UpgradeButton } from '../components/UpgradeModal';
 
 export default function RecordsView() {
   const plan = usePlan();
   const [selectedClient, setSelectedClient] = useState<ClientLog | null>(null);
   const [showIntake, setShowIntake] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   return (
     <>
@@ -36,12 +38,19 @@ export default function RecordsView() {
             <p className="text-sm text-slate-500 max-w-md">
               Upgrade to the Professional plan to unlock live analytics charts, status breakdowns, and daily report generation.
             </p>
-            <div className="mt-4 flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-xs font-semibold text-emerald-700">
-              <TrendingUp size={13} /> Professional: 45,000 RWF / month — Analytics + Reports included
+            <div className="mt-5">
+              <UpgradeButton onClick={() => setShowUpgrade(true)} label="Upgrade to Professional" size="md" />
             </div>
           </div>
         )}
       </div>
+
+      {/* Upgrade modal */}
+      <UpgradeModal
+        open={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        lockedFeature="analytics"
+      />
 
       {/* Upload / Intake Modal */}
       {showIntake && (

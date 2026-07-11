@@ -12,6 +12,7 @@ import { ClientLog, ClientStatus } from '../../types';
 import StatusBadge from './StatusBadge';
 import Button from '../../components/Button';
 import RecordDetailModal from './RecordDetailModal';
+import UpgradeModal from '../../components/UpgradeModal';
 
 interface RecordsTableProps {
   selectedId: string | null;
@@ -228,6 +229,7 @@ function VerifiedSearchModal({
 export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: RecordsTableProps) {
   const { office } = useAuth();
   const plan = usePlan();
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [records, setRecords] = useState<ClientLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -239,6 +241,8 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
   const [showFilter, setShowFilter] = useState(false);
   const [showActions, setShowActions] = useState(false);
   const [showVerifiedSearch, setShowVerifiedSearch] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 10;
 
   useEffect(() => { fetchRecords(); }, [office?.id]);
 
@@ -287,6 +291,13 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
       return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
     });
 
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const safePage = Math.min(currentPage, Math.max(1, totalPages));
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setCurrentPage(1); }, [search, statusFilter]);
+
   function toggleAll() {
     setSelected(selected.size === filtered.length ? new Set() : new Set(filtered.map(r => r.id)));
   }
@@ -325,9 +336,14 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
             variant="secondary"
             size="sm"
             icon={plan.hasReports ? <FileBarChart2 size={13} /> : <Lock size={13} />}
-            onClick={() => plan.hasReports && downloadXLSX(records, 'daily-report')}
-            disabled={!plan.hasReports}
-            className={!plan.hasReports ? 'opacity-50 cursor-not-allowed' : ''}
+            onClick={() => {
+              if (plan.hasReports) {
+                downloadXLSX(records, 'daily-report');
+              } else {
+                setShowUpgrade(true);
+              }
+            }}
+            className={!plan.hasReports ? 'opacity-60' : ''}
           >
             {plan.hasReports ? 'Generate Report' : 'Report (Pro)'}
           </Button>
@@ -437,7 +453,7 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
                   </td>
                 </tr>
               )}
-              {!loading && filtered.map(record => {
+              {!loading && paginated.map(record => {
                 const isActive = selectedId === record.id;
                 const isChecked = selected.has(record.id);
                 return (
@@ -486,10 +502,39 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
         </div>
 
         {!loading && filtered.length > 0 && (
-          <div className="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between">
-            <p className="text-xs text-slate-400">
-              Showing {filtered.length} of {records.length} record{records.length !== 1 ? 's' : ''}
+          <div className="px-4 py-2.5 border-t border-slate-100 flex items-center justify-between gap-2">
+            <p className="text-xs text-slate-400 whitespace-nowrap">
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
             </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safePage <= 1}
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                <button
+                  key={p}
+                  onClick={() => setCurrentPage(p)}
+                  className={`w-7 h-7 text-xs font-bold rounded-lg transition-colors ${
+                    p === safePage
+                      ? 'bg-[#003366] text-white'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safePage >= totalPages}
+                className="px-2.5 py-1 text-xs font-semibold rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
             {selected.size > 0 && (
               <p className="text-xs font-semibold text-[#003366]">{selected.size} selected</p>
             )}
@@ -514,6 +559,12 @@ export default function RecordsTable({ selectedId, onSelect, onUploadRecord }: R
           onClose={() => setShowVerifiedSearch(false)}
         />
       )}
+
+      <UpgradeModal
+        open={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        lockedFeature="reports"
+      />
     </>
   );
 }

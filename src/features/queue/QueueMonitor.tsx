@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Activity, RefreshCw, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Activity, RefreshCw, ChevronDown, Volume2, VolumeX, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeQueue } from '../../hooks/useRealtimeQueue';
 import { supabase } from '../../lib/supabase';
@@ -49,6 +49,50 @@ function StatusMenu({ client, onUpdated }: { client: ClientLog; onUpdated: () =>
 export default function QueueMonitor() {
   const { office } = useAuth();
   const { queue, loading, error, refetch } = useRealtimeQueue(office?.id ?? null);
+  const [soundOn, setSoundOn] = useState(true);
+  const [newFlash, setNewFlash] = useState<string | null>(null);
+  const prevCountRef = useRef(0);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  // Audio beep when a new client joins the queue
+  useEffect(() => {
+    if (loading || queue.length === 0) {
+      prevCountRef.current = queue.length;
+      return;
+    }
+
+    const prevCount = prevCountRef.current;
+    if (queue.length > prevCount && soundOn) {
+      // New client arrived — play a beep
+      try {
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+        }
+        const ctx = audioCtxRef.current;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+      } catch { /* audio not available */ }
+
+      // Flash the newest card
+      const newest = queue[queue.length - 1];
+      if (newest) {
+        setNewFlash(newest.id);
+        setTimeout(() => setNewFlash(null), 3000);
+      }
+    }
+    prevCountRef.current = queue.length;
+  }, [queue.length, loading, soundOn]);
+
+  // Find the first "Ready" client to highlight
+  const readyClient = queue.find(c => c.status === 'Ready');
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4 min-h-[400px]">
@@ -61,11 +105,36 @@ export default function QueueMonitor() {
           <span className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-full font-semibold">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
           </span>
+          <button
+            onClick={() => setSoundOn(!soundOn)}
+            className={`p-1.5 rounded-lg transition-colors ${soundOn ? 'text-emerald-600 hover:bg-emerald-50' : 'text-slate-400 hover:bg-slate-100'}`}
+            title={soundOn ? 'Sound on' : 'Sound off'}
+          >
+            {soundOn ? <Volume2 size={14} /> : <VolumeX size={14} />}
+          </button>
           <button onClick={refetch} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
             <RefreshCw size={14} />
           </button>
         </div>
       </div>
+
+      {/* Ready callout banner */}
+      {readyClient && (
+        <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl px-4 py-3 flex items-center gap-3 shadow-md shadow-emerald-200 animate-[pulse_2s_ease-in-out_infinite]">
+          <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
+            <Bell size={18} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[10px] font-bold text-emerald-100 uppercase tracking-widest">Ready to be called</p>
+            <p className="text-sm font-bold text-white">
+              #{String(readyClient.client_number).padStart(3, '0')} · {readyClient.full_name}
+            </p>
+          </div>
+          <span className="text-2xl font-black text-white tabular-nums">
+            {String(readyClient.client_number).padStart(3, '0')}
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 overflow-y-auto flex-1">
         {loading && [1, 2, 3].map(i => <div key={i} className="h-20 bg-slate-100 rounded-xl animate-pulse" />)}
@@ -78,7 +147,19 @@ export default function QueueMonitor() {
           </div>
         )}
         {!loading && queue.map((client, idx) => (
-          <div key={client.id} className="group relative">
+          <div
+            key={client.id}
+            className={`group relative rounded-xl transition-all duration-500 ${
+              newFlash === client.id
+                ? 'ring-2 ring-emerald-400 ring-offset-1 scale-[1.02]'
+                : ''
+            }`}
+          >
+            {newFlash === client.id && (
+              <span className="absolute -top-2 -right-2 z-10 bg-emerald-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full animate-bounce">
+                NEW
+              </span>
+            )}
             <QueueCard client={client} position={idx + 1} />
             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
               <StatusMenu client={client} onUpdated={refetch} />

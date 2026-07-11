@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { QrCode, ExternalLink, ScanLine, AlertTriangle, Lock } from 'lucide-react';
+import { QrCode, ExternalLink, ScanLine, AlertTriangle, Lock, Crown } from 'lucide-react';
 import QRCode from 'qrcode';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { usePlan } from '../../hooks/usePlan';
 import { ServiceCategory } from '../../types';
 import InputField from '../../components/InputField';
 import Button from '../../components/Button';
+import UpgradeModal from '../../components/UpgradeModal';
 
 function generateToken(): string {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -28,6 +29,7 @@ export default function IntakeForm() {
   const [token, setToken] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const [scanUrl, setScanUrl] = useState('');
+  const [showUpgrade, setShowUpgrade] = useState(false);
 
   useEffect(() => {
     if (!office) return;
@@ -56,6 +58,7 @@ export default function IntakeForm() {
     // Tier gate: Basic plan 200/month limit
     if (plan.requestsLimit !== Infinity && plan.requestsUsed >= plan.requestsLimit) {
       setError(`You have reached the ${plan.requestsLimit} monthly request limit on the Basic plan. Upgrade to Professional for unlimited requests.`);
+      setShowUpgrade(true);
       return;
     }
 
@@ -225,14 +228,30 @@ export default function IntakeForm() {
               </p>
             </div>
           </div>
-          <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${plan.requestsRemaining > 0 ? 'bg-sky-500' : 'bg-red-500'}`}
-              style={{ width: `${Math.min(100, (plan.requestsUsed / plan.requestsLimit) * 100)}%` }}
-            />
+          <div className="flex items-center gap-2">
+            <div className="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${plan.requestsRemaining > 0 ? 'bg-sky-500' : 'bg-red-500'}`}
+                style={{ width: `${Math.min(100, (plan.requestsUsed / plan.requestsLimit) * 100)}%` }}
+              />
+            </div>
+            {plan.requestsRemaining === 0 && (
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#002244] text-white text-[10px] font-bold hover:bg-[#003366] transition-colors whitespace-nowrap"
+              >
+                <Crown size={10} /> Upgrade
+              </button>
+            )}
           </div>
         </div>
       )}
+
+      <UpgradeModal
+        open={showUpgrade}
+        onClose={() => setShowUpgrade(false)}
+        lockedFeature="requests"
+      />
     </div>
   );
 }
