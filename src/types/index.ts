@@ -5,7 +5,8 @@ export type ClientStatus =
   | 'Archived'
   | 'Signed & Recorded'
   | 'Rejected'
-  | 'Pending Verification';
+  | 'Pending Verification'
+  | 'Skipped';
 
 export type FieldType =
   | 'text' | 'long_text' | 'date' | 'number' | 'phone' | 'email'
@@ -57,6 +58,7 @@ export interface ClientLog {
   submitted_at: string | null;
   expires_at: string | null;
   created_at: string;
+  skipped_at: string | null;
 }
 
 export interface ServiceCategory {

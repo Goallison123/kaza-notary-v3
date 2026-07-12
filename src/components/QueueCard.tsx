@@ -11,6 +11,7 @@ const statusConfig: Record<ClientStatus, { label: string; pill: string; card: st
   Ready:                  { label: 'Ready',               pill: 'bg-emerald-500 text-white', card: 'bg-emerald-50',  border: 'border-emerald-300', numberBg: 'bg-emerald-500', numberText: 'text-white' },
   'Filing Details':       { label: 'Filing',              pill: 'bg-sky-500 text-white',     card: 'bg-sky-50',      border: 'border-sky-200',     numberBg: 'bg-sky-100',     numberText: 'text-sky-700' },
   Pending:                { label: 'Pending',             pill: 'bg-amber-500 text-white',   card: 'bg-amber-50',    border: 'border-amber-200',   numberBg: 'bg-amber-100',   numberText: 'text-amber-700' },
+  Skipped:                { label: 'Skipped',              pill: 'bg-red-500 text-white',     card: 'bg-red-50',      border: 'border-red-200',     numberBg: 'bg-red-100',     numberText: 'text-red-600' },
   Archived:               { label: 'Archived',            pill: 'bg-slate-400 text-white',   card: 'bg-slate-50',    border: 'border-slate-200',   numberBg: 'bg-slate-200',   numberText: 'text-slate-600' },
   'Signed & Recorded':    { label: 'Signed',              pill: 'bg-teal-500 text-white',    card: 'bg-teal-50',     border: 'border-teal-200',    numberBg: 'bg-teal-100',    numberText: 'text-teal-700' },
   Rejected:               { label: 'Rejected',            pill: 'bg-red-500 text-white',     card: 'bg-red-50',      border: 'border-red-200',     numberBg: 'bg-red-100',      numberText: 'text-red-700' },

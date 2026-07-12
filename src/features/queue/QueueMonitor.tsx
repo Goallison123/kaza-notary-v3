@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Activity, RefreshCw, ChevronDown, Volume2, VolumeX, Bell } from 'lucide-react';
+import { Activity, RefreshCw, ChevronDown, Volume2, VolumeX, Bell, SkipForward, RotateCcw, Clock } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeQueue } from '../../hooks/useRealtimeQueue';
 import { supabase } from '../../lib/supabase';
@@ -7,6 +7,9 @@ import { ClientLog, ClientStatus } from '../../types';
 import QueueCard from '../../components/QueueCard';
 
 const STATUS_FLOW: ClientStatus[] = ['Pending', 'Filing Details', 'Ready', 'Archived'];
+
+// Auto-skip a Ready client after this many seconds if they don't show up
+const AUTO_SKIP_SECONDS = 180; // 3 minutes
 
 function StatusMenu({ client, onUpdated }: { client: ClientLog; onUpdated: () => void }) {
   const [open, setOpen] = useState(false);
@@ -51,6 +54,8 @@ export default function QueueMonitor() {
   const { queue, loading, error, refetch } = useRealtimeQueue(office?.id ?? null);
   const [soundOn, setSoundOn] = useState(true);
   const [newFlash, setNewFlash] = useState<string | null>(null);
+  const [skipping, setSkipping] = useState<string | null>(null);
+  const [autoSkipCountdown, setAutoSkipCountdown] = useState<number | null>(null);
   const prevCountRef = useRef(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
@@ -63,7 +68,6 @@ export default function QueueMonitor() {
 
     const prevCount = prevCountRef.current;
     if (queue.length > prevCount && soundOn) {
-      // New client arrived — play a beep
       try {
         if (!audioCtxRef.current) {
           audioCtxRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
@@ -81,7 +85,6 @@ export default function QueueMonitor() {
         osc.stop(ctx.currentTime + 0.4);
       } catch { /* audio not available */ }
 
-      // Flash the newest card
       const newest = queue[queue.length - 1];
       if (newest) {
         setNewFlash(newest.id);
@@ -91,8 +94,55 @@ export default function QueueMonitor() {
     prevCountRef.current = queue.length;
   }, [queue.length, loading, soundOn]);
 
-  // Find the first "Ready" client to highlight
+  // Auto-skip countdown for Ready clients
   const readyClient = queue.find(c => c.status === 'Ready');
+
+  useEffect(() => {
+    if (!readyClient) {
+      setAutoSkipCountdown(null);
+      return;
+    }
+
+    const readyTime = readyClient.skipped_at ? null : new Date(readyClient.created_at).getTime();
+    // Use submitted_at or updated_at as a proxy for when they were marked Ready
+    // Since we don't have an explicit ready_at, we use a simple countdown from when they appear as Ready
+    setAutoSkipCountdown(AUTO_SKIP_SECONDS);
+
+    const interval = setInterval(() => {
+      setAutoSkipCountdown(prev => {
+        if (prev === null) return null;
+        if (prev <= 1) {
+          // Auto-skip
+          handleSkip(readyClient.id);
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [readyClient?.id]);
+
+  async function handleSkip(clientId: string) {
+    setSkipping(clientId);
+    await supabase.from('client_logs').update({ status: 'Skipped' }).eq('id', clientId);
+    setSkipping(null);
+    refetch();
+  }
+
+  async function handleRecall(clientId: string) {
+    setSkipping(clientId);
+    await supabase.from('client_logs').update({ status: 'Ready' }).eq('id', clientId);
+    setSkipping(null);
+    refetch();
+  }
+
+  // Find the first "Ready" client to highlight
+  const skippedClients = queue.filter(c => c.status === 'Skipped');
+
+  const countdownDisplay = autoSkipCountdown !== null
+    ? `${Math.floor(autoSkipCountdown / 60)}:${String(autoSkipCountdown % 60).padStart(2, '0')}`
+    : null;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 flex flex-col gap-4 min-h-[400px]">
@@ -118,7 +168,7 @@ export default function QueueMonitor() {
         </div>
       </div>
 
-      {/* Ready callout banner */}
+      {/* Ready callout banner with auto-skip countdown */}
       {readyClient && (
         <div className="bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl px-4 py-3 flex items-center gap-3 shadow-md shadow-emerald-200 animate-[pulse_2s_ease-in-out_infinite]">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center shrink-0">
@@ -130,9 +180,51 @@ export default function QueueMonitor() {
               #{String(readyClient.client_number).padStart(3, '0')} · {readyClient.full_name}
             </p>
           </div>
+          {countdownDisplay && (
+            <div className="flex flex-col items-center mr-2">
+              <span className="text-[9px] text-emerald-100 uppercase font-bold">Auto-skip</span>
+              <span className="text-sm font-black text-white tabular-nums">{countdownDisplay}</span>
+            </div>
+          )}
+          <button
+            onClick={() => handleSkip(readyClient.id)}
+            disabled={skipping === readyClient.id}
+            className="flex items-center gap-1 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-white text-xs font-bold transition-colors disabled:opacity-50"
+            title="Skip this client (no-show)"
+          >
+            {skipping === readyClient.id
+              ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              : <><SkipForward size={13} /> Skip</>}
+          </button>
           <span className="text-2xl font-black text-white tabular-nums">
             {String(readyClient.client_number).padStart(3, '0')}
           </span>
+        </div>
+      )}
+
+      {/* Skipped clients recall bar */}
+      {skippedClients.length > 0 && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Clock size={14} className="text-red-500" />
+            <p className="text-xs font-bold text-red-700">
+              {skippedClients.length} skipped — {skippedClients.length === 1 ? 'client was' : 'clients were'} not available
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {skippedClients.map(c => (
+              <button
+                key={c.id}
+                onClick={() => handleRecall(c.id)}
+                disabled={skipping === c.id}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 rounded-lg text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+              >
+                {skipping === c.id
+                  ? <span className="w-3 h-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  : <><RotateCcw size={11} /> Recall #{String(c.client_number).padStart(3, '0')} · {c.full_name}</>}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -161,7 +253,29 @@ export default function QueueMonitor() {
               </span>
             )}
             <QueueCard client={client} position={idx + 1} />
-            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute top-3 right-3 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Skip button for non-skipped, non-archived clients */}
+              {client.status !== 'Skipped' && client.status !== 'Archived' && (
+                <button
+                  onClick={e => { e.stopPropagation(); handleSkip(client.id); }}
+                  disabled={skipping === client.id}
+                  className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                  title="Skip (no-show)"
+                >
+                  <SkipForward size={10} /> Skip
+                </button>
+              )}
+              {/* Recall button for skipped clients */}
+              {client.status === 'Skipped' && (
+                <button
+                  onClick={e => { e.stopPropagation(); handleRecall(client.id); }}
+                  disabled={skipping === client.id}
+                  className="flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                  title="Recall to queue"
+                >
+                  <RotateCcw size={10} /> Recall
+                </button>
+              )}
               <StatusMenu client={client} onUpdated={refetch} />
             </div>
           </div>
@@ -171,6 +285,7 @@ export default function QueueMonitor() {
       {!loading && queue.length > 0 && (
         <p className="text-xs text-slate-400 text-center border-t border-slate-100 pt-3">
           {queue.length} client{queue.length !== 1 ? 's' : ''} in active queue
+          {skippedClients.length > 0 && ` · ${skippedClients.length} skipped`}
         </p>
       )}
     </div>

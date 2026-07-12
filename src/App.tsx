@@ -11,6 +11,9 @@ import SettingsView from './views/SettingsView';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ScanPage from './pages/ScanPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
+import SecurityPage from './pages/SecurityPage';
 import KazaLoader from './components/KazaLoader';
 
 type AppView = 'dashboard' | 'records' | 'settings';
@@ -74,6 +77,9 @@ export default function App() {
         session ? <Navigate to="/dashboard" replace /> : <RegisterPage />
       } />
       <Route path="/scan/:token" element={<ScanPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/security" element={<SecurityPage />} />
       <Route path="/*" element={
         <ProtectedRoute>
           <AppShell />

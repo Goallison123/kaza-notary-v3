@@ -14,7 +14,7 @@ export function useRealtimeQueue(officeId: string | null) {
       .from('client_logs')
       .select('*')
       .eq('office_id', officeId)
-      .in('status', ['Pending', 'Filing Details', 'Ready'])
+      .in('status', ['Pending', 'Filing Details', 'Ready', 'Skipped'])
       .order('created_at', { ascending: true });
 
     if (fetchError) setError(fetchError.message);

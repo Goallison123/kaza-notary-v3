@@ -112,8 +112,12 @@ export default function FAQSection({ onEnterApp }: FAQSectionProps) {
           </div>
           <p className="text-slate-600 text-xs">© 2026 Kaza. Built for professional offices across East Africa.</p>
           <div className="flex gap-4">
-            {['Privacy', 'Terms', 'Security'].map(l => (
-              <button key={l} className="text-slate-600 text-xs hover:text-slate-400 transition-colors">{l}</button>
+            {[
+              { label: 'Privacy', path: '/privacy' },
+              { label: 'Terms', path: '/terms' },
+              { label: 'Security', path: '/security' },
+            ].map(l => (
+              <a key={l.label} href={l.path} className="text-slate-600 text-xs hover:text-slate-400 transition-colors">{l.label}</a>
             ))}
           </div>
         </div>

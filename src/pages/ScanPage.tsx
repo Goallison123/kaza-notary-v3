@@ -314,6 +314,8 @@ export default function ScanPage() {
       serviceName: data.category_name ?? data.service_type ?? formData.category_name ?? 'General',
       officeName: data.office_name ?? formData.office_name ?? 'Kaza Office',
       submittedAt: data.submitted_at ?? new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      officeId: data.office_id ?? undefined,
+      clientLogId: data.client_log_id ?? undefined,
     });
     setSubmitted(true);
     setSubmitting(false);
